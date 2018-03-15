@@ -16,6 +16,7 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
+#include <H/COMMON>                         // Common header
 #include <H/MSGFUNC>                        // MsgFunc header
 
 // function snd_error_msg()
