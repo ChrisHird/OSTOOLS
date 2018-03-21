@@ -1,6 +1,7 @@
 #ifndef MSGFUNC_h
    #define MSGFUNC_h
-   #include <qmhsndm.h>                        // snd msg
+   #include <H/COMMON>                      // common header
+   #include <qmhsndm.h>                     // snd msg
 
    //the default message queue
    #define _DFT_MSGQ "OSMSGQ    *LIBL     "
