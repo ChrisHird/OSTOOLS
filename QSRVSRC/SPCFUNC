@@ -1,0 +1,7 @@
+STRPGMEXP PGMLVL(*CURRENT)
+/********************************************************************/
+/*   *MODULE      SPCFUNC      OSLIB        03/15/18  14:48:20      */
+/********************************************************************/
+  EXPORT SYMBOL("Get_Spc_Ptr")
+  EXPORT SYMBOL("Crt_Usr_Spc")
+ENDPGMEXP
