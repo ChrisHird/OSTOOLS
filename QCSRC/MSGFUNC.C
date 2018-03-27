@@ -16,7 +16,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-#include <H/COMMON>                         // Common header
 #include <H/MSGFUNC>                        // MsgFunc header
 
 // function snd_error_msg()
@@ -48,6 +47,54 @@ QMHSNDM(Error_Code.EC.Exception_Id,
 if(E_Code.EC.Bytes_Available > 0) {
    // if we get an error on sending the message send it
    snd_error_msg(E_Code);
+   }
+return;
+}
+
+// function snd_msg()
+// Purpose: Place a message in the message queue.
+// @parms
+//      string MsgID
+//      string Msg_Data
+//      int Msg_Dta_Len
+// returns void
+
+void snd_msg(char * MsgID,
+             char * Msg_Data,
+             int Msg_Dta_Len) {
+char Msg_Type[10] = "*INFO     ";           // msg type
+char Call_Stack[10] = {"*EXT      "};       // call stack entry
+char QRpy_Q[20] = {' '};                    // reply queue
+char Msg_Key[4] = {' '};                    // msg key
+Os_EC_t Error_Code = {0};                   // error code struct
+
+Error_Code.EC.Bytes_Provided = _ERR_REC;
+// send the message to the message queue
+QMHSNDM(MsgID,
+        _DFT_MSGF,
+        Msg_Data,
+        Msg_Dta_Len,
+        Msg_Type,
+        _DFT_MSGQ,
+        1,
+        QRpy_Q,
+        Msg_Key,
+        &Error_Code);
+if(Error_Code.EC.Bytes_Available > 0) {
+   snd_error_msg(Error_Code);
+   }
+// add a diag message to the program message queue
+QMHSNDPM(MsgID,
+         _DFT_MSGF,
+         Msg_Data,
+         Msg_Dta_Len,
+         "*DIAG     ",
+         "*         ",
+         0,
+         Msg_Key,
+         &Error_Code);
+if(Error_Code.EC.Bytes_Available > 0) {
+   snd_error_msg(Error_Code);
    }
 return;
 }
