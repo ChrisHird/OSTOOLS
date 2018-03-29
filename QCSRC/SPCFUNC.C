@@ -74,7 +74,7 @@ QUSPTRUS(Name,
 if(Error_Code.EC.Bytes_Available > 0) {
    if(memcmp(Error_Code.EC.Exception_Id,"CPF9801",7) == 0) {
       // It does not exist so create it
-      if(!Crt_Usr_Spc(Name,size,fd,debug)) {
+      if(!Crt_Usr_Spc(Name,size)) {
          return -1;
          }
       // now get the pointer
