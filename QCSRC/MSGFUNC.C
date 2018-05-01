@@ -32,7 +32,7 @@ char Msg_Key[4] = {' '};                    // msg key
 char QRpy_Q[20] = {' '};                    // reply queue
 Os_EC_t E_Code = {0};                       // error code struct
 
-Error_Code.EC.Bytes_Provided = _ERR_REC;
+E_Code.EC.Bytes_Provided = _ERR_REC;
 data_len = Error_Code.EC.Bytes_Available - 16;  // BA + BP +msgid +rsvd
 QMHSNDM(Error_Code.EC.Exception_Id,
         Msg_File,
