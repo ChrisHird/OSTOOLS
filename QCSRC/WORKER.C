@@ -43,21 +43,18 @@ int ret = 0;                                // return vals
 int Stop = 0;                               // stop flag
 int i = 0;                                  // counter
 int j = 0;                                  // counter
+int len = 0;                                // msg_dta length
 int offset = 0;                             // offset marker
 int total_bytes = 0;                        // counter
 int bytes_processed = 0;                    // counter
 int valid_user = 0;                         // valid user flag
 int req = 0;                                // request flag
-size_t insz;                                // input len
-size_t outsz = _32K;                        // outbuf size
 char recv_buf[_32K];                        // recv buffer
-char convbuf[_32K];                         // conversion buffer
-char msg_dta[_MAX_MSG];                     // message buffer
+char convBuf[_32K];                         // conversion buffer
+char msg_dta[1024];                         // message buffer
 char Usr_hdl[12];                           // Usr profile handle
 char Cur_hdl[12];                           // Current profile handle
 char key[5] = {'\0'};                       // request key
-char *out_ptr;                              // buffer ptr
-char *in_ptr;                               // buffer ptr
 struct sockaddr_in addr;                    // socket struct
 struct sigaction sigact;                    // Signal Action Struct
 QtqCode_T jobCode = {0,0,0,0,0,0};          // (Job) CCSID to struct
@@ -117,14 +114,10 @@ do {
    // at this point we need to get the key information and switch to sort
    // the first 4 bytes will be the key and it must be sent separately the enter key is also passed
    if(rc == 5) {
-      in_ptr = recv_buf;
-      out_ptr = convbuf;
-      insz = rc;
-      outsz = _32K;
-      ret = (iconv(a_e_ccsid,(char **)&(in_ptr),&insz,(char **)&(out_ptr),&outsz));
-      memcpy(key,convbuf,4);
-      sprintf(msg_dta,"Key : %s",key);
-      snd_msg("GEN0001",msg_dta,strlen(msg_dta));
+      convert_buffer(recv_buf,convBuf,rc,_32K,a_e_ccsid);
+      memcpy(key,convBuf,4);
+      //sprintf(msg_dta,"Key : %s",key);
+      //snd_msg("GEN0001",msg_dta,strlen(msg_dta));
       req = atoi(key);
       switch(req) {
          case  0 :
@@ -132,12 +125,9 @@ do {
             if(Handle_SO(accept_sd,Usr_hdl,a_e_ccsid,e_a_ccsid) != 1) {
                sprintf(msg_dta,"Sign On failed : ");
                snd_msg("GEN0001",msg_dta,strlen(msg_dta));
-               in_ptr = msg_dta;
-               out_ptr = convbuf;
-               insz = strlen(msg_dta);
-               outsz = _32K;
-               ret = (iconv(e_a_ccsid,(char **)&(in_ptr),&insz,(char **)&(out_ptr),&outsz));
-               rc = send(accept_sd,convbuf,strlen(msg_dta),0);
+               len = strlen(msg_dta);
+               convert_buffer(msg_dta,convBuf,len,_32K,e_a_ccsid);
+               rc = send(accept_sd,convBuf,len,0);
                close(accept_sd);
                }
             valid_user = 1;
@@ -155,26 +145,36 @@ do {
                                        &Error_Code);
                // send closing message
                sprintf(msg_dta,"OK signing off and closing socket : ");
-               in_ptr = msg_dta;
-               out_ptr = convbuf;
-               insz = strlen(msg_dta);
-               outsz = _32K;
-               ret = (iconv(e_a_ccsid,(char **)&(in_ptr),&insz,(char **)&(out_ptr),&outsz));
-               rc = send(accept_sd,convbuf,strlen(msg_dta),0);
+               len = strlen(msg_dta);
+               convert_buffer(msg_dta,convBuf,len,_32K,e_a_ccsid);
+               rc = send(accept_sd,convBuf,len,0);
                // close the socket
                close(accept_sd);
                valid_user = 0;
                }
             break;
+         case 2 :
+            if(valid_user == 1) {
+               if(handle_CM(accept_sd,a_e_ccsid,e_a_ccsid) == 1) {
+                  sprintf(msg_dta,"Command succeeded");
+                  len = strlen(msg_dta);
+                  convert_buffer(msg_dta,convBuf,len,_32K,e_a_ccsid);
+                  rc = send(accept_sd,convBuf,len,0);
+                  }
+               }
+            else {
+               sprintf(msg_dta,"Must be signed on to send request");
+               len = strlen(msg_dta);
+               convert_buffer(msg_dta,convBuf,len,_32K,e_a_ccsid);
+               rc = send(accept_sd,convBuf,len,0);
+               }
+            break;
          default :
                sprintf(msg_dta,"Unknown Request : ");
                snd_msg("GEN0001",msg_dta,strlen(msg_dta));
-               in_ptr = msg_dta;
-               out_ptr = convbuf;
-               insz = strlen(msg_dta);
-               outsz = _32K;
-               ret = (iconv(e_a_ccsid,(char **)&(in_ptr),&insz,(char **)&(out_ptr),&outsz));
-               rc = send(accept_sd,convbuf,strlen(msg_dta),0);
+               len = strlen(msg_dta);
+               convert_buffer(msg_dta,convBuf,len,_32K,e_a_ccsid);
+               rc = send(accept_sd,convBuf,strlen(msg_dta),0);
             break;
          } // switch
       } // key request
