@@ -1,0 +1,15 @@
+STRPGMEXP PGMLVL(*CURRENT)
+/********************************************************************/
+/*   *MODULE      SRVFUNC      OSLIB        05/10/18  11:18:45      */
+/********************************************************************/
+  EXPORT SYMBOL("handle_CM")
+  EXPORT SYMBOL("Handle_SO")
+  EXPORT SYMBOL("convert_buffer")
+ENDPGMEXP
+
+STRPGMEXP PGMLVL(*PREVIOUS)
+/********************************************************************/
+/*   *MODULE      SRVFUNC      OSLIB        05/01/18  11:46:14      */
+/********************************************************************/
+  EXPORT SYMBOL("Handle_SO")
+ENDPGMEXP
