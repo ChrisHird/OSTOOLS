@@ -10,6 +10,20 @@
                            Qus_EC_t EC;
                            char Exception_Data[1024];
                            } Os_EC_t;
+
+   typedef _Packed struct  date_fmt_x {
+                           char C;
+                           char Y[2];
+                           char M[2];
+                           char D[2];
+                           } date_fmt_t;
+
+   typedef _Packed struct  time_fmt_x {
+                           char H[2];
+                           char M[2];
+                           char S[2];
+                           } time_fmt_t;
+
    // define size
    #define _ERR_REC sizeof(struct Os_EC_x);
 
@@ -24,7 +38,7 @@
    #define _4MB _1MB * 4
    #define _8MB _1MB * 8
    #define _16MB 16773120
-
+   #define CHAR_32K "32768"
 
 
    #endif

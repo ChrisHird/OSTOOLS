@@ -169,6 +169,22 @@ do {
                rc = send(accept_sd,convBuf,len,0);
                }
             break;
+         case 3 :
+            if(valid_user == 1) {
+               if(handle_MR(accept_sd,a_e_ccsid,e_a_ccsid) != 1) {
+                  sprintf(msg_dta,"Failed to retrieve messages");
+                  len = strlen(msg_dta);
+                  convert_buffer(msg_dta,convBuf,len,_32K,e_a_ccsid);
+                  rc = send(accept_sd,convBuf,len,0);
+                  }
+               }
+            else {
+               sprintf(msg_dta,"Must be signed on to send request");
+               len = strlen(msg_dta);
+               convert_buffer(msg_dta,convBuf,len,_32K,e_a_ccsid);
+               rc = send(accept_sd,convBuf,len,0);
+               }
+            break;
          default :
                sprintf(msg_dta,"Unknown Request : ");
                snd_msg("GEN0001",msg_dta,strlen(msg_dta));

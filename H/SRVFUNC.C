@@ -18,9 +18,15 @@
    #include <qcmdchk.h>                     // cmd check
    #include <qcmdexc.h>                     // execute cmd
    #include <except.h>                      // exception funcs
+   #include <qgyolmsg.h>                    // list messages
+   #include <qgygtle.h>                     // get list entry
+   #include <qgyclst.h>                     // close list
 
    int convert_buffer(char *,char *,int,int,iconv_t);
    static void cmd_errhdl(_INTRPT_Hndlr_Parms_T *);
    int Handle_SO(int,char *,iconv_t,iconv_t);
    int handle_CM(int,iconv_t,iconv_t);
+   int handle_MR(int,iconv_t,iconv_t);
+   int Crt_Q_Name(char *,char *);
+   int Cvt_Hex_Buf(char *,char *,int);
    #endif

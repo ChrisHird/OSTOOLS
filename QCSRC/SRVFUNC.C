@@ -1,4 +1,5 @@
 #include <H/SRVFUNC>                        // Server Functions Header
+#include <H/SPCFUNC>                        // user space functions
 
 // Function convert_buffer()
 // purpose: Convert buffer to and from ASCII
@@ -193,13 +194,12 @@ int len = 0;                                // counter
 char recv_buf[_32K];                        // recv buffer
 char msg_dta[1024];                         // message buffer
 char Cmd[1024] = {'\0'};                    // Command string converted
-char convBuf[1024];                         // conversion buffer
-
+char convBuf[_1KB];                         // conversion buffer
 
 // first we need to retieve the command
 sprintf(msg_dta,"Please enter a command : ");
 len = strlen(msg_dta);
-convert_buffer(msg_dta,convBuf,len,132,e_a_ccsid);
+convert_buffer(msg_dta,convBuf,len,_1KB,e_a_ccsid);
 rc = send(accept_sd,convBuf,len,0);
 // make sure the data was sent
 if(rc != len) {
@@ -211,12 +211,12 @@ rc = recv(accept_sd,recv_buf,_32K,0);
 // maximum command size must be less than 1023 based on conversion buffer size
 if(rc > 1023) {
    sprintf(msg_dta,"Command string too long");
-   convert_buffer(msg_dta,convBuf,len,132,e_a_ccsid);
+   convert_buffer(msg_dta,convBuf,len,_1KB,e_a_ccsid);
    rc = send(accept_sd,convBuf,len,0);
    return -1;
    }
 // command len is OK so convert the buffer
-convert_buffer(recv_buf,convBuf,rc,132,a_e_ccsid);
+convert_buffer(recv_buf,convBuf,rc,_1KB,a_e_ccsid);
 // strip off the 'A0' byte.
 len = rc -1;
 memcpy(Cmd,convBuf,len);
@@ -227,7 +227,7 @@ e_count = 0;
 QCMDCHK(Cmd,len);
 if(e_count > 0) {
    sprintf(msg_dta,"Command check failed");
-   convert_buffer(msg_dta,convBuf,len,132,e_a_ccsid);
+   convert_buffer(msg_dta,convBuf,len,_1KB,e_a_ccsid);
    rc = send(accept_sd,convBuf,len,0);
    return -1;
    }
@@ -241,11 +241,234 @@ if(e_count > 0) {
    else {
       sprintf(msg_dta,"Command execution failed");
       }
-   convert_buffer(msg_dta,convBuf,len,132,e_a_ccsid);
+   convert_buffer(msg_dta,convBuf,len,_1KB,e_a_ccsid);
    rc = send(accept_sd,convBuf,len,0);
    return -1;
    }
 // remove the handler
 #pragma disable_handler
 return 1;
+}
+
+// Function handle_MR()
+// purpose: retrieve messages from a message queue
+// @parms
+//      socket
+//      conversion table a-e
+//      conversion table e-a
+// returns 1 on success
+
+int handle_MR(int accept_sd,
+              iconv_t a_e_ccsid,
+              iconv_t e_a_ccsid) {
+int rc = 0;                                 // return code
+int len = 0;                                // counter
+int Min_Recs = 50;                          // Async record request
+int Num_Recs = 0;                           // number records processed
+int Total_Recs = 0;                         // total records in queue
+int i = 0;                                  // counter
+int more = 0;                               // more messages
+char Sort_Info = '0';                       // msg sort (not sorted)
+char recv_buf[_32K];                        // recv buffer
+char msg_dta[1024];                         // message buffer
+char convBuf[_1KB];                         // conversion buffer
+char Q_MsgQ[22];                            // qualified message queue
+char SPC_Name[20] = "QGYOLMSG  QTEMP     "; // usrspc for data
+char ListInfo[80];                          // list info returned by API
+char QI[21] = {'1',' '};                    // msgq to list
+char QL[44];                                // holder
+char Msg_Buf[_1KB];                         // returned message
+char MsgQ[20] = "          *LIBL     ";     // message queue
+char _CRLF[2] = {0x0d,0x0a};                // CRLF ASCII
+char *space;                                // usrspc pointer
+char *tmp;                                  // temp ptr
+char *Data;                                 // data ptr
+SelInf_t SI = {0};                          // selection info
+Msg_Ret_t *QIPtr;                           // queue info ptr
+time_fmt_t *t;                              // time struct ptr
+date_fmt_t *d;                              // date struct ptr
+Msg_Dets_t Dets;                            // messages returned
+Qgy_Olmsg_ListInfo_t *ret_info;             // returned hdr
+Qgy_Olmsg_RecVar_t *ret_msg;                // returned message
+Qgy_Olmsg_IDFieldInfo_t *field_data;        // returned msg dta
+Os_EC_t Error_Code = {0};                   // Error Code
+
+Error_Code.EC.Bytes_Provided = _ERR_REC;
+// first get the message queue name
+sprintf(msg_dta,"Please enter the message Queue Name : ");
+len = strlen(msg_dta);
+convert_buffer(msg_dta,convBuf,len,_1KB,e_a_ccsid);
+rc = send(accept_sd,convBuf,len,0);
+// make sure the data was sent
+if(rc != len) {
+   return -1;
+   }
+// get the comman string to process
+rc = recv(accept_sd,recv_buf,_32K,0);
+// convert to EBCDIC
+convert_buffer(recv_buf,convBuf,rc,_1KB,a_e_ccsid);
+// copy with removed A0
+memcpy(MsgQ,convBuf,rc-1);
+// set up the message queue to retrieve, '1' denotes message queue
+memcpy(&QI[1],MsgQ,20);
+// get a space pointer for the messages
+if(Get_Spc_Ptr(SPC_Name,&space,_1MB) != 1) {
+   return -1;
+   }
+memcpy(SI.osData.List_Direction,"*PRV      ",10);
+// return all messages
+SI.osData.Severity_Criteria = 0;
+// max message length for 0302 key
+SI.osData.Max_Msg_Length = 132;
+// help length, we do not request
+SI.osData.Max_Help_Length = 0;
+//offset to selection criteria (44 bytes)
+SI.osData.Sel_Criteria_Offset = sizeof(_Packed struct Qgy_Olmsg_MsgSelInfo);
+// number of selections
+SI.osData.Num_Sel_Criteria = 1;
+// offset to keys
+SI.osData.Start_Msg_Keys_Offset = 54;
+SI.osData.Retd_Fields_IDs_Offset = 58;
+SI.osData.Num_Fields = 2;
+// select all with key based on last message added
+memcpy(SI.Sel_Cri[0],"*ALL      ",10);
+memset(SI.Msg_Key[0],0xFF,4);
+// fields to return, msg with data and reply status
+SI.FieldID[0] = 302;
+SI.FieldID[1] = 1001;
+// set up the pointer to the message structure
+ret_msg = (Qgy_Olmsg_RecVar_t *)Msg_Buf;
+// set up the pointer to list info
+ret_info = (Qgy_Olmsg_ListInfo_t *)ListInfo;
+// date and time conversion
+t = (time_fmt_t *)ret_msg->Time_Sent;
+d = (date_fmt_t *)ret_msg->Date_Sent;
+do {
+   more = 0;
+   // pull the messages into the user space
+   QGYOLMSG(space,
+            _1MB,
+            ListInfo,
+            Min_Recs,
+            &Sort_Info,
+            &SI,
+            sizeof(SI),
+            QI,
+            QL,
+            &Error_Code);
+   if(Error_Code.EC.Bytes_Available > 0) {
+      snd_error_msg(Error_Code);
+      return -1;
+      }
+   if(ret_info->Records_Retd < ret_info->Total_Records) {
+      more == 1;
+      }
+   Num_Recs = ret_info->Records_Retd;
+   sprintf(msg_dta,"Messages %d - %d",ret_info->Records_Retd,ret_info->Total_Records);
+   snd_msg("GEN0001",msg_dta,strlen(msg_dta));
+   // if nothing to do just break
+   if(ret_info->Total_Records <= 0) {
+      break;
+      }
+   // loop through and get the messages to be sent
+   for(i = 1; i <= Num_Recs; i++) {
+      QGYGTLE(Msg_Buf,
+              sizeof(Msg_Buf),
+              ret_info->Request_Handle,
+              &ListInfo,
+              1,
+              i,
+              &Error_Code);
+      if(Error_Code.EC.Bytes_Available > 0) {
+         // clean up and return to caller
+         if(memcmp(Error_Code.EC.Exception_Id,"GUI0006",7) != 0)
+            snd_error_msg(Error_Code);
+         QGYCLST(ret_info->Request_Handle,&Error_Code);
+         return -1;
+         }
+      // set up the access to the data
+      tmp = Msg_Buf;
+      tmp += ret_msg->Offset_to_Fields_Retd;
+      field_data = (Qgy_Olmsg_IDFieldInfo_t *)tmp;
+      Data = tmp;
+      Data += sizeof(_Packed struct Qgy_Olmsg_IDFieldInfo);
+      // copy the message infor to the buffer
+      memcpy(Dets.MsgID,ret_msg->Msg_ID,7);
+      Dets.MsgSev = ret_msg->Msg_Severity;
+      Cvt_Hex_Buf(ret_msg->Msg_Key,Dets.MsgKey,4);
+      memset(Dets.MsgDta,' ',132);
+      memcpy(Dets.MsgDta,Data,field_data->Data_Length);
+      sprintf(Dets.Date_Time,"20%.2s-%.2s-%.2s %.2s:%.2s:%.2s",d->Y,d->M,d->D,t->H,t->M,t->S);
+      // convert to ASCII and send
+      convert_buffer((char *)&Dets,convBuf,sizeof(Dets),_1KB,e_a_ccsid);
+      rc = send(accept_sd,convBuf,sizeof(Dets),0);
+      // send a CRLF for ASCII
+      rc = send(accept_sd,_CRLF,2,0);
+      }
+   // set the starting message key
+   memcpy(SI.Msg_Key[0],ret_msg->Msg_Key,4);
+   } while(more == 1);
+// clean up the resources
+QGYCLST(ret_info->Request_Handle,&Error_Code);
+if(Error_Code.EC.Bytes_Available > 0) {
+   snd_error_msg(Error_Code);
+   return -1;
+   }
+// first get the message queue name
+sprintf(msg_dta,"End of Messages : ");
+len = strlen(msg_dta);
+convert_buffer(msg_dta,convBuf,len,_1KB,e_a_ccsid);
+rc = send(accept_sd,convBuf,len,0);
+// make sure the data was sent
+if(rc != len) {
+   return -1;
+   }
+return 1;
+}
+
+// function Crt_Q_Name()
+// Purpose: To create a qualified object name. LIB/OBJ
+// @parms
+//      string object
+//      string q name
+// returns 1 success
+
+int Crt_Q_Name(char *Object,
+               char *Q_Name) {
+int i,j = 0;                                // counters
+
+for(i = 10,j = 0; i < 20; i++,j++) {
+   Q_Name[j] = (Object[i] == ' ') ? '\0' : Object[i];
+   }
+Q_Name[j] = '\0';
+strcat(Q_Name,"/");
+j = strlen(Q_Name);
+for(i = 0;i < 10;i++,j++) {
+   Q_Name[j] = (Object[i] == ' ') ? '\0' : Object[i];
+   }
+Q_Name[j] = '\0';
+return 1;
+}
+
+// function Cvt_Hex_Buf
+// Convert Hex to Ascii for output
+// @parms
+//      char Ptr hex buffero
+//      char ptr ascii buffer
+//      int length hex buffer
+// returns 1
+
+int Cvt_Hex_Buf(char *inbuf,
+                char *outbuf,
+                int buflen) {
+char *tmp;
+
+tmp = inbuf;
+while(buflen) {
+   sprintf(outbuf,"%02x",*tmp);
+   buflen--;
+   tmp++;
+   outbuf += 2;
+   }
+return buflen;
 }
