@@ -1,0 +1,9 @@
+STRPGMEXP PGMLVL(*CURRENT)
+/********************************************************************/
+/*   *MODULE      IPFUNC       OSLIB        06/01/18  17:58:45      */
+/********************************************************************/
+  EXPORT SYMBOL("rmt_connect")
+  EXPORT SYMBOL("Get_Host_Addr")
+  EXPORT SYMBOL("free_mem")
+  EXPORT SYMBOL("parse_url")
+ENDPGMEXP

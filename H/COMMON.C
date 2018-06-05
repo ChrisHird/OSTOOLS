@@ -39,6 +39,6 @@
    #define _8MB _1MB * 8
    #define _16MB 16773120
    #define CHAR_32K "32768"
-
+   #define _MAX_MSG 1024
 
    #endif
