@@ -76,11 +76,16 @@ if(rc != strlen(req)) {
    return -1;
    }
 // receive the response
-rc = recv(sockfd,recv_buf,_32K,0);
-// convert back to ebcdic
-memset(convBuf,'\0',_32K);
-convert_buffer(recv_buf,convBuf,rc,_32K,a_e_ccsid);
-printf("returned data %s\n",convBuf);
+do {
+   rc = recv(sockfd,recv_buf,_32K,0);
+   if(rc <= 0) {
+      break;
+      }
+   // convert back to ebcdic
+   memset(convBuf,'\0',_32K);
+   convert_buffer(recv_buf,convBuf,rc,_32K,a_e_ccsid);
+   printf("returned data %s\n",convBuf);
+   } while(rc > 0);
 // close the socket
 close(sockfd);
 // free any allocated memory
