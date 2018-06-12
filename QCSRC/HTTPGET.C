@@ -73,10 +73,19 @@ else {
       }
    }
 // connect to the server
-if(rmt_connect(parsed_url.host,server_port,&sockfd) != 1) {
-   printf("Failed to connect\n");
+if(memcmp(parsed_url.scheme,"http",5) == 0) {
+   if(rmt_connect(parsed_url.host,server_port,&sockfd) != 1) {
+      printf("Failed to connect\n");
+      free_mem(&parsed_url);
+      return -1;
+      }
+   }
+else {
+   // https request requires special handling
+   sprintf(msg_dta,"Cannot connect via https at this time");
+   snd_msg("GEN0001",msg_dta,strlen(msg_dta));
    free_mem(&parsed_url);
-   return -1;
+   exit(0);
    }
 // build the request
 sprintf(req,"GET /%s?%s HTTP/1.1%.2sHost: %s%.2sConnection: close%.2s%.2s",
