@@ -1,4 +1,4 @@
-STRPGMEXP PGMLVL(*CURRENT)
+STRPGMEXP PGMLVL(*PREVIOUS)
 /********************************************************************/
 /*   *MODULE      MSGFUNC      OSLIB        03/13/18  12:02:21      */
 /********************************************************************/
@@ -8,6 +8,6 @@ STRPGMEXP PGMLVL(*CURRENT)
 /********************************************************************/
 /*   *MODULE      MSGFUNC      OSLIB        03/26/18  14:38:31      */
 /********************************************************************/
-  EXPORT SYMBOL("snd_msg")
   EXPORT SYMBOL("snd_error_msg")
+  EXPORT SYMBOL("snd_msg")
 ENDPGMEXP
