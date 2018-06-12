@@ -1,24 +1,21 @@
-/*********************************************************************/
-/*                                                                   */
-/*Program Name: SVRSTOP                                              */
-/*                                                                   */
-/*Program Language:  ILE C                                           */
-/*                                                                   */
-/*Description: This program illustrates how to use APIs to create    */
-/*             and manipulate a data queue.                          */
-/*                                                                   */
-/*                                                                   */
-/*Header Files Included: <stdio.h>                                   */
-/*                       <string.h>                                  */
-/*                       <stdlib.h>                                  */
-/*                       <decimal.h>                                 */
-/*                       <qsnddtaq.h>                                */
-/*                                                                   */
-/*                                                                   */
-/*APIs Used:                                                         */
-/*               QSNDDTAQ - Send Data to dataqueue                   */
-/*                                                                   */
-/*********************************************************************/
+//
+// Copyright (c) 2018 Chris Hird
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+//
+// Disclaimer :
+// This code is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
 #include <stdio.h>                          // stdio header
 #include <string.h>                         // string header
 #include <stdlib.h>                         // stdlib header
