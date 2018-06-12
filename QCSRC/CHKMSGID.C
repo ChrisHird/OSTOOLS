@@ -26,30 +26,6 @@
 #pragma linkage (COPYSRCA,OS,nowiden)
 void COPYSRCA(char *,char *,char *);
 
-// function Crt_Q_Name()
-// Purpose: To create a qualified object name. LIB/OBJ
-// @parms
-//      string object
-//      string q name
-// returns 1 success
-
-int Crt_Q_Name(char *Object,
-               char *Q_Name) {
-int i,j = 0;                                // counters
-
-for(i = 10,j = 0; i < 20; i++,j++) {
-   Q_Name[j] = (Object[i] == ' ') ? '\0' : Object[i];
-   }
-Q_Name[j] = '\0';
-strcat(Q_Name,"/");
-j = strlen(Q_Name);
-for(i = 0;i < 10;i++,j++) {
-   Q_Name[j] = (Object[i] == ' ') ? '\0' : Object[i];
-   }
-Q_Name[j] = '\0';
-return 1;
-}
-
 // function check_recs()
 // Purpose: Read through the records looking for string
 // @parms
