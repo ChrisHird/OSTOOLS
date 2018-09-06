@@ -147,6 +147,8 @@ convert_buffer(msg_dta,convBuf,len,132,e_a_ccsid);
 rc = send(accept_sd,convBuf,len,0);
 // make sure the data was sent
 if(rc != len) {
+   sprintf(msg_dta,"Failed to send request for Profile");
+   snd_msg("GEN0001",msg_dta,strlen(msg_dta));
    return -1;
    }
 // make sure not too long. Our test server sends a '0A' at the end of the input so
@@ -155,32 +157,34 @@ rc = recv(accept_sd,recv_buf,_32K,0);
 // copy to the Profile holder which is initialized with all blanks after conversion
 convert_buffer(recv_buf,convBuf,rc,132,a_e_ccsid);
 // strip off the 'A0' byte.
-len = rc -1;
-if(len > 10) {
+//len = rc -1;
+if(rc > 10) {
    sprintf(msg_dta,"Profile too long Sign On aborted");
    snd_msg("GEN0001",msg_dta,strlen(msg_dta));
    return -1;
    }
-memcpy(Profile,convBuf,len);
+memcpy(Profile,convBuf,rc);
 // now get the password
 sprintf(msg_dta,"Please enter your Password : ");
 len = strlen(msg_dta);
 convert_buffer(msg_dta,convBuf,len,132,e_a_ccsid);
 rc = send(accept_sd,convBuf,len,0);
 if(rc != len) {
+   sprintf(msg_dta,"Failed to send request for Password");
+   snd_msg("GEN0001",msg_dta,strlen(msg_dta));
    return -1;
    }
 // recv the password and convert
 rc = recv(accept_sd,recv_buf,_32K,0);
 convert_buffer(recv_buf,convBuf,rc,132,a_e_ccsid);
 // strip off the 'A0' byte.
-len = rc -1;
-if(len > 128) {
+//len = rc -1;
+if(rc > 128) {
    sprintf(msg_dta,"Password too long");
    snd_msg("GEN0001",msg_dta,strlen(msg_dta));
    return -1;
    }
-memcpy(Pwd,convBuf,len);
+memcpy(Pwd,convBuf,rc);
 // now check the password against the profile, CCSID of 0 means use the job ccsid
 QsyGetProfileHandle(Usr_hdl,
                     Profile,
@@ -285,7 +289,7 @@ int Min_Recs = 50;                          // Async record request
 int Num_Recs = 0;                           // number records processed
 int Total_Recs = 0;                         // total records in queue
 int i = 0;                                  // counter
-int more = 0;                               // more messages
+int more = 1;                               // more messages
 char Sort_Info = '0';                       // msg sort (not sorted)
 char recv_buf[_32K];                        // recv buffer
 char msg_dta[1024];                         // message buffer
@@ -297,7 +301,11 @@ char QI[21] = {'1',' '};                    // msgq to list
 char QL[44];                                // holder
 char Msg_Buf[_1KB];                         // returned message
 char MsgQ[20] = "          *LIBL     ";     // message queue
-char _CRLF[2] = {0x0d,0x0a};                // CRLF ASCII
+char json_str[500];                         // json string
+char msgid[8];                              // message ID
+char sev[3];                                // message severity
+char msg[133];                              // message
+char ts[21];                                // time stamp
 char *space;                                // usrspc pointer
 char *tmp;                                  // temp ptr
 char *Data;                                 // data ptr
@@ -305,7 +313,6 @@ SelInf_t SI = {0};                          // selection info
 Msg_Ret_t *QIPtr;                           // queue info ptr
 time_fmt_t *t;                              // time struct ptr
 date_fmt_t *d;                              // date struct ptr
-Msg_Dets_t Dets;                            // messages returned
 Qgy_Olmsg_ListInfo_t *ret_info;             // returned hdr
 Qgy_Olmsg_RecVar_t *ret_msg;                // returned message
 Qgy_Olmsg_IDFieldInfo_t *field_data;        // returned msg dta
@@ -321,12 +328,12 @@ rc = send(accept_sd,convBuf,len,0);
 if(rc != len) {
    return -1;
    }
-// get the comman string to process
+// get the message queue to process
 rc = recv(accept_sd,recv_buf,_32K,0);
 // convert to EBCDIC
 convert_buffer(recv_buf,convBuf,rc,_1KB,a_e_ccsid);
 // copy with removed A0
-memcpy(MsgQ,convBuf,rc-1);
+memcpy(MsgQ,convBuf,rc);
 // set up the message queue to retrieve, '1' denotes message queue
 memcpy(&QI[1],MsgQ,20);
 // get a space pointer for the messages
@@ -362,7 +369,6 @@ ret_info = (Qgy_Olmsg_ListInfo_t *)ListInfo;
 t = (time_fmt_t *)ret_msg->Time_Sent;
 d = (date_fmt_t *)ret_msg->Date_Sent;
 do {
-   more = 0;
    // pull the messages into the user space
    QGYOLMSG(space,
             _1MB,
@@ -378,14 +384,14 @@ do {
       snd_error_msg(Error_Code);
       return -1;
       }
-   if(ret_info->Records_Retd < ret_info->Total_Records) {
-      more == 1;
-      }
-   Num_Recs = ret_info->Records_Retd;
    sprintf(msg_dta,"Messages %d - %d",ret_info->Records_Retd,ret_info->Total_Records);
-   snd_msg("GEN0001",msg_dta,strlen(msg_dta));
+   Total_Recs += ret_info->Records_Retd;
+   Num_Recs = ret_info->Records_Retd;
+   //snd_msg("GEN0001",msg_dta,strlen(msg_dta));
    // if nothing to do just break
-   if(ret_info->Total_Records <= 0) {
+   if(ret_info->Records_Retd <= 0) {
+      sprintf(msg_dta,"No records to read");
+      snd_msg("GEN0001",msg_dta,strlen(msg_dta));
       break;
       }
    // loop through and get the messages to be sent
@@ -410,22 +416,25 @@ do {
       field_data = (Qgy_Olmsg_IDFieldInfo_t *)tmp;
       Data = tmp;
       Data += sizeof(_Packed struct Qgy_Olmsg_IDFieldInfo);
-      // copy the message infor to the buffer
-      memcpy(Dets.MsgID,ret_msg->Msg_ID,7);
-      Dets.MsgSev = ret_msg->Msg_Severity;
-      Cvt_Hex_Buf(ret_msg->Msg_Key,Dets.MsgKey,4);
-      memset(Dets.MsgDta,' ',132);
-      memcpy(Dets.MsgDta,Data,field_data->Data_Length);
-      sprintf(Dets.Date_Time,"20%.2s-%.2s-%.2s %.2s:%.2s:%.2s",d->Y,d->M,d->D,t->H,t->M,t->S);
+      sprintf(msgid,"%.7s",ret_msg->Msg_ID);
+      sprintf(sev,"%.2d",ret_msg->Msg_Severity);
+      memset(msg,'\0',133);
+      memcpy(msg,Data,field_data->Data_Length);
+      sprintf(ts,"20%.2s-%.2s-%.2s %.2s:%.2s:%.2s",d->Y,d->M,d->D,t->H,t->M,t->S);
+      sprintf(json_str,"{msgid : %s,sev : %s,msg : %s,ts : %s}",msgid,sev,msg,ts);
       // convert to ASCII and send
-      convert_buffer((char *)&Dets,convBuf,sizeof(Dets),_1KB,e_a_ccsid);
-      rc = send(accept_sd,convBuf,sizeof(Dets),0);
-      // send a CRLF for ASCII
-      rc = send(accept_sd,_CRLF,2,0);
+      convert_buffer(json_str,convBuf,strlen(json_str),_1KB,e_a_ccsid);
+      rc = send(accept_sd,convBuf,strlen(json_str),0);
+      // get response
+      rc = recv(accept_sd,recv_buf,1024,0);
+      // if no response break
+      if(rc <= 0) {
+         break;
+         }
       }
    // set the starting message key
    memcpy(SI.Msg_Key[0],ret_msg->Msg_Key,4);
-   } while(more == 1);
+   } while(Total_Recs < ret_info->Total_Records);
 // clean up the resources
 QGYCLST(ret_info->Request_Handle,&Error_Code);
 if(Error_Code.EC.Bytes_Available > 0) {
