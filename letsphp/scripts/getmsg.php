@@ -1,18 +1,14 @@
 <?php
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 // set up some variables to be used
 $key = "0000 ";
 $name = $_POST['userid'];
 $pass = $_POST['pwd'];
+$server = 'fill in your server address here';
 $port = 12345;
 $bytes_read = 0;
 $bytes_written = 0;
 // get the host address
-$address = gethostbyname('sas4.shield.local');
+$address = gethostbyname($Server);
 $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 if ($socket === false) {
     $_SESSION['ErrMsg'] = "socket_create() failed: reason: " . socket_strerror(socket_last_error()) . "\n";
